@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "EduHaïti",
+    "name": "EduHa\u00efti",
     "slug": "edu-haiti",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,6 +28,23 @@
     },
     "plugins": [
       "expo-secure-store"
+    ],
+    "scheme": "eduhaiti",
+    "intentFilters": [
+      {
+        "action": "VIEW",
+        "autoVerify": true,
+        "data": [
+          {
+            "scheme": "eduhaiti",
+            "host": "setup"
+          }
+        ],
+        "category": [
+          "BROWSABLE",
+          "DEFAULT"
+        ]
+      }
     ]
   }
 }
