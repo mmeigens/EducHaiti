@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "EduHa\u00efti",
+    "name": "EduHaïti",
     "slug": "edu-haiti",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,9 +14,10 @@
       "bundleIdentifier": "com.eduhaiti.sgs"
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#1C1152"
-      },
+"adaptiveIcon": {
+  "foregroundImage": "./assets/icon.png",
+  "backgroundColor": "#1C1152"
+},
       "package": "com.eduhaiti.sgs",
       "permissions": [
         "INTERNET",
@@ -45,6 +46,11 @@
           "DEFAULT"
         ]
       }
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "473748a5-7cc1-43e3-b0f2-92ee24466af4"
+      }
+    }
   }
 }
