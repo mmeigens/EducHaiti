@@ -270,7 +270,7 @@ function SetupScreen({ onDone }) {
     setLoading(true);
     try {
       const res = await apiCall(trimmed, 'ping');
-      if (res && (res.success || res.status === 'ok' || res.pong)) {
+      if (res && (res.success || res.status === 'ok' || res.status === 'online' || res.pong)) {
         await store(KEYS.schoolUrl, trimmed);
         onDone(trimmed);
       } else {
@@ -1449,7 +1449,7 @@ export default function App() {
     (async () => {
       try {
         const res = await apiCall(gasUrl, 'ping');
-        if (res && (res.success || res.status === 'ok' || res.pong)) {
+        if (res && (res.success || res.status === 'ok' || res.status === 'online' || res.pong)) {
           await store(KEYS.schoolUrl, gasUrl);
           if (schoolN) await store(KEYS.schoolName, schoolN);
           setSchoolUrl(gasUrl);
