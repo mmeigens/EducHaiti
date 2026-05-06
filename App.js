@@ -9,6 +9,12 @@
  *  - Multi-tenant safe: switching schools clears all state
  */
 
+// ─── Deep linking (Expo) ─────────────────────────────────────────────────────
+// Intercepte eduhaiti://setup?url=...&name=... pour configurer l'ecole auto.
+// Installer : npx expo install expo-linking
+let Linking;
+try { Linking = require('expo-linking'); } catch(_) { Linking = null; }
+
 import React, {
   useState, useEffect, useCallback, useRef, createContext, useContext
 } from 'react';
@@ -102,6 +108,12 @@ async function apiCall(baseUrl, action, params = {}, token = null) {
 }
 
 // ─── Storage Helpers ─────────────────────────────────────────────────────────
+// ─── Deep link scheme ────────────────────────────────────────────────────────
+const DEEP_LINK_SCHEME = 'eduhaiti';
+const DEEP_LINK_PREFIX = Linking
+  ? Linking.createURL('/')
+  : 'eduhaiti://';
+
 const KEYS = {
   schoolUrl:  'edu_school_url',
   token:      'edu_token',
@@ -1165,6 +1177,11 @@ function SettingsScreen({ onLogout, onChangeSchool, schoolUrl }) {
         <Text style={s.cardTitle}>École</Text>
         {row('🏫', 'Nom de l\'école', settings?.schoolName || settings?.orgName || '—')}
         {row('🔗', 'URL de déploiement', schoolUrl)}
+        {row('🌐', 'Ouvrir le portail web', '', () => {
+          if (schoolUrl && Linking) {
+            Linking.openURL(schoolUrl).catch(() => {});
+          }
+        })}
         {row('📱', 'Version de l\'app', '1.0.0')}
       </Card>
 
@@ -1341,6 +1358,41 @@ function MainApp({ schoolUrl, schoolLogoInitial = '', user, onLogout, onChangeSc
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
   const [phase, setPhase]       = useState('loading'); // loading | setup | login | app
+  const [pendingUrl, setPendingUrl] = useState(null); // URL recue via deep link
+
+  // ── Interception deep link : eduhaiti://setup?url=...&name=... ────────────
+  useEffect(() => {
+    if (!Linking) return;
+
+    // Gere le deep link si l'app etait deja ouverte
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    // Gere le deep link au premier lancement (app fermee)
+    Linking.getInitialURL().then(url => {
+      if (url) handleDeepLink(url);
+    }).catch(() => {});
+
+    return () => subscription?.remove();
+  }, []);
+
+  function handleDeepLink(url) {
+    if (!url) return;
+    // Ignorer les URLs http/https — les laisser au navigateur
+    if (url.startsWith('http://') || url.startsWith('https://')) return;
+    try {
+      // Accepte : eduhaiti://setup?url=...&name=...
+      const parsed = Linking ? Linking.parse(url) : null;
+      if (!parsed) return;
+      const { hostname, queryParams } = parsed;
+      if (hostname !== 'setup' && !url.includes('/setup')) return;
+      const gasUrl = queryParams?.url ? decodeURIComponent(queryParams.url) : '';
+      const schoolN = queryParams?.name ? decodeURIComponent(queryParams.name) : '';
+      if (!gasUrl || !gasUrl.startsWith('https://')) return;
+      setPendingUrl({ gasUrl, schoolN });
+    } catch(_) {}
+  }
   const [schoolUrl, setSchoolUrl] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [user, setUser]         = useState(null);
@@ -1364,6 +1416,8 @@ export default function App() {
       setSchoolName(savedSchool || '');
       // Restaurer le logo mis en cache
       // (sera rafraichi apres reconnexion)
+      // Note: si un deep link est arrive pendant le chargement,
+      // pendingUrl sera applique apres ce bloc via l'effet ci-dessous
 
       if (savedToken) {
         // Validate token
@@ -1385,6 +1439,27 @@ export default function App() {
       setPhase('login');
     })();
   }, []);
+
+  // Applique le deep link des que la phase de chargement est terminee
+  useEffect(() => {
+    if (!pendingUrl || phase === 'loading') return;
+    const { gasUrl, schoolN } = pendingUrl;
+    setPendingUrl(null);
+    // Valider l'URL puis passer directement au login
+    (async () => {
+      try {
+        const res = await apiCall(gasUrl, 'ping');
+        if (res && (res.success || res.status === 'ok' || res.pong)) {
+          await store(KEYS.schoolUrl, gasUrl);
+          if (schoolN) await store(KEYS.schoolName, schoolN);
+          setSchoolUrl(gasUrl);
+          setSchoolName(schoolN || '');
+          setUser(null);
+          setPhase('login');
+        }
+      } catch(_) {}
+    })();
+  }, [pendingUrl, phase]);
 
   async function handleLogout() {
     await Promise.all([remove(KEYS.token), remove(KEYS.role), remove(KEYS.name), remove(KEYS.email)]);
