@@ -73,7 +73,9 @@ const useApp = () => useContext(AppCtx);
 // ─── Composant logo de l'école ────────────────────────────────────────────────
 // Affiche le logo distant si disponible, sinon replie sur l'initiale de l'école.
 function SchoolLogo({ size = 38, style }) {
-  const { schoolLogo, schoolName } = useApp();
+  const ctx = useApp();
+  const schoolLogo = ctx ? ctx.schoolLogo : '';
+  const schoolName = ctx ? ctx.schoolName : '';
   const [error, setError] = useState(false);
   if (schoolLogo && !error) {
     return (
@@ -407,7 +409,7 @@ function LoginScreen({ schoolUrl, schoolName, onLogin, onChangeSchool }) {
         <ScrollView contentContainerStyle={s.loginContainer} keyboardShouldPersistTaps="handled">
           {/* School badge */}
           <View style={s.schoolBadge}>
-            <SchoolLogo size={36} style={{ marginRight: 0 }} />
+            <Text style={s.schoolBadgeIcon}>🏫</Text>
             <View style={{ flex: 1 }}>
               <Text style={s.schoolBadgeName}>{schoolName || 'École'}</Text>
               <Text style={s.schoolBadgeUrl} numberOfLines={1}>{schoolUrl}</Text>
